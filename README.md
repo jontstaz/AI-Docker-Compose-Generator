@@ -6,6 +6,11 @@ DockerComposeAIGenerator is an AI-powered tool that automatically generates Dock
 
 This project takes a GitHub repository URL as input, analyzes its structure and content, and uses an AI model to generate appropriate Docker configuration files tailored to that specific project. It's perfect for developers who want to quickly containerize and deploy projects without spending time manually crafting Docker configurations.
 
+## Screenshot
+
+![AI Docker Generator Screenshot](screenshot.jpg)
+*AI Docker Generator WebUI showing generated Docker configurations for a GitHub repository*
+
 ## Features
 
 - **One-Click Generation**: Simply provide a GitHub URL and get ready-to-use Docker configurations
