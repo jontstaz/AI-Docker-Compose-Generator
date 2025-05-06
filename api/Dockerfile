@@ -12,11 +12,17 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy our start.py file first
+COPY start.py .
+
+# Copy the rest of the application code
 COPY . .
 
 # Expose port
 EXPOSE 8000
 
-# Start the application - adding the absolute module path
+# Set Python path explicitly
+ENV PYTHONPATH="/app:${PYTHONPATH}"
+
+# Start the application with our startup script
 CMD ["python", "start.py"] 
