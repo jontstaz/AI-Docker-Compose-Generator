@@ -92,6 +92,28 @@ The project consists of two main components:
 
 6. Copy or download the configuration files and use them in your project
 
+## Docker Deployment
+
+You can easily deploy this application using Docker:
+
+1. Copy the example environment file and set your OpenAI API key:
+   ```bash
+   cp .env-example .env
+   # Edit .env with your actual API key
+   ```
+
+2. Build and start the containers:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. Access the application at http://localhost:3000
+
+4. To stop the containers:
+   ```bash
+   docker-compose down
+   ```
+
 ## How It Works
 
 1. The tool fetches and analyzes the GitHub repository using Repomix, which creates a semantic map of the project's structure and content

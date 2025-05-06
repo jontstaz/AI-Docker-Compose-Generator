@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./api:/app
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - FASTAPI_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge 
