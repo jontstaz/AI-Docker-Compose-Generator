@@ -1,5 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+// Define interface for OpenAI model structure
+interface OpenAIModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+}
+
+// Define interface for API response
+interface OpenAIModelsResponse {
+  data: OpenAIModel[];
+  object: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -25,15 +39,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch models from OpenAI" }, { status: response.status })
     }
 
-    const data = await response.json()
+    const data = await response.json() as OpenAIModelsResponse
     
     // Filter for GPT models
     const gptModels = data.data
-      .filter((model: any) => {
+      .filter((model: OpenAIModel) => {
         const id = model.id.toLowerCase()
         return id.includes("gpt") && !id.includes("instruct")
       })
-      .map((model: any) => ({
+      .map((model: OpenAIModel) => ({
         id: model.id,
         name: model.id
       }))
