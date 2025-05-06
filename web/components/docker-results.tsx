@@ -65,13 +65,15 @@ export function DockerResults({ dockerfile, dockerCompose }: DockerResultsProps)
           <Button
             variant="ghost"
             size="sm"
-            className="absolute right-2 top-2 text-gray-400 hover:text-white hover:bg-gray-700"
+            className="absolute right-2 top-2 z-10 text-gray-400 hover:text-white hover:bg-gray-700"
             onClick={() => copyToClipboard(getDockerfileContent(), "dockerfile")}
           >
             {copiedDockerfile ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             <span className="ml-2">{copiedDockerfile ? "Copied!" : "Copy"}</span>
           </Button>
-          <CodeBlock code={getDockerfileContent()} language={getDockerfileLanguage()} />
+          <div className="mt-2">
+            <CodeBlock code={getDockerfileContent()} language={getDockerfileLanguage()} />
+          </div>
         </div>
       </TabsContent>
 
@@ -80,13 +82,15 @@ export function DockerResults({ dockerfile, dockerCompose }: DockerResultsProps)
           <Button
             variant="ghost"
             size="sm"
-            className="absolute right-2 top-2 text-gray-400 hover:text-white hover:bg-gray-700"
+            className="absolute right-2 top-2 z-10 text-gray-400 hover:text-white hover:bg-gray-700"
             onClick={() => copyToClipboard(getComposeContent(), "compose")}
           >
             {copiedCompose ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             <span className="ml-2">{copiedCompose ? "Copied!" : "Copy"}</span>
           </Button>
-          <CodeBlock code={getComposeContent()} language={getComposeLanguage()} />
+          <div className="mt-2">
+            <CodeBlock code={getComposeContent()} language={getComposeLanguage()} />
+          </div>
         </div>
       </TabsContent>
     </Tabs>

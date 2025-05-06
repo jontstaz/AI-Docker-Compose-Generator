@@ -6,10 +6,14 @@ const API_URL = process.env.FASTAPI_API_URL || "http://localhost:8000"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { repoUrl } = body
+    const { repoUrl, apiKey, model } = body
 
     if (!repoUrl) {
       return NextResponse.json({ error: "Repository URL is required" }, { status: 400 })
+    }
+
+    if (!apiKey) {
+      return NextResponse.json({ error: "OpenAI API key is required" }, { status: 400 })
     }
 
     // Forward the request to your FastAPI backend
@@ -18,7 +22,11 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ repo_url: repoUrl }),
+      body: JSON.stringify({ 
+        repo_url: repoUrl,
+        openai_api_key: apiKey,
+        model: model || "gpt-4.1-mini-2025-04-14" 
+      }),
     })
 
     if (!response.ok) {

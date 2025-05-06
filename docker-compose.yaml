@@ -7,8 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    environment:
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./api:/app
     restart: unless-stopped

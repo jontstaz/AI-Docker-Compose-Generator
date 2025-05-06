@@ -26,8 +26,8 @@ if not OPENAI_API_KEY:
 # --- Pydantic Models for Request/Response ---
 class RepoRequest(BaseModel):
     repo_url: str = Field(..., description="Public URL of the GitHub repository")
-    # Optional: Add model choice later if needed
-    # llm_model: str | None = Field("gpt-4.1-mini-2025-04-14", description="OpenAI model identifier")
+    openai_api_key: str = Field(..., description="OpenAI API key for making LLM requests")
+    model: str = Field("gpt-4.1-mini-2025-04-14", description="OpenAI model to use for generation")
 
 class TechStack(BaseModel):
     languages: list[str] = []
@@ -73,11 +73,14 @@ app = FastAPI(
 @app.post("/generate-docker-config", response_model=DockerConfigResponse)
 async def generate_docker_config(request: RepoRequest):
     """
-    Accepts a GitHub repository URL, processes it with Repomix,
+    Accepts a GitHub repository URL and OpenAI API key, processes it with Repomix,
     queries GPT-4.1-mini via OpenAI API, and returns generated Docker configurations.
     """
-    if not OPENAI_API_KEY:
-         raise HTTPException(status_code=500, detail="Server configuration error: OpenAI API key not set.")
+    # Use API key from request instead of environment variable
+    api_key = request.openai_api_key
+    
+    if not api_key:
+         raise HTTPException(status_code=400, detail="OpenAI API key is required.")
 
     repo_url = request.repo_url
     logger.info(f"Processing request for repository: {repo_url}")
@@ -158,14 +161,14 @@ async def generate_docker_config(request: RepoRequest):
     final_prompt = LLM_PROMPT_TEMPLATE.format(repo_context=repo_context)
     
     try:
-        # Initialize OpenAI client
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        # Initialize OpenAI client with API key from request
+        client = openai.OpenAI(api_key=api_key)
         
-        logger.info(f"Sending request to OpenAI GPT-4.1-mini for {repo_url}")
+        logger.info(f"Sending request to OpenAI {request.model} for {repo_url}")
         
-        # Make the API call to OpenAI GPT-4.1
+        # Make the API call to OpenAI with the specified model
         response = client.chat.completions.create(
-            model="gpt-4.1-mini-2025-04-14",
+            model=request.model,
             max_tokens=8000,
             messages=[
                 {"role": "user", "content": final_prompt}

@@ -114,6 +114,23 @@ You can easily deploy this application using Docker:
    docker-compose down
    ```
 
+## Demo Version
+
+This branch (`demo-version`) contains a modified version of the application designed for demonstration purposes:
+
+- Users must provide their own OpenAI API key in the web interface
+- No API key is required in the `.env` file
+- The application can be deployed without exposing your own API key
+
+This makes it suitable for public demonstrations or hosted previews where you don't want to expose your own API key.
+
+To deploy the demo version:
+
+```bash
+git checkout demo-version
+docker-compose up -d
+```
+
 ## How It Works
 
 1. The tool fetches and analyzes the GitHub repository using Repomix, which creates a semantic map of the project's structure and content
