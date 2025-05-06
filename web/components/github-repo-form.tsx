@@ -143,7 +143,7 @@ export function GitHubRepoForm() {
           
           <div className="relative flex-grow">
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Key className="h-5 w-5 text-gray-400" />
+              <Key className="h-5 w-5 text-gray-400 my-auto" style={{ marginTop: '8px' }} />
             </div>
             <Input
               type="password"
