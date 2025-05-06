@@ -40,9 +40,15 @@ class CodeFile(BaseModel):
     content: str
     language: str  # Syntax highlighting language identifier
 
+class DockerfileInfo(BaseModel):
+    content: str
+    language: str = "dockerfile"  # Syntax highlighting language identifier
+    location: str  # Path where this Dockerfile should be saved (e.g., "./web/Dockerfile")
+    service: str  # Name of the service this Dockerfile is for (e.g., "frontend", "backend")
+
 class DockerConfigResponse(BaseModel):
     techStack: TechStack
-    dockerfile: CodeFile
+    dockerfiles: list[DockerfileInfo]  # Now an array of Dockerfiles with location information
     dockerCompose: CodeFile
 
 # --- LLM Prompt ---
@@ -54,13 +60,21 @@ Context:
 {repo_context}
 ---END CONTEXT---
 
-Based *only* on the provided project context, generate a production-ready docker-compose.yaml and, if necessary, a corresponding Dockerfile configuration suitable for deploying this project.
+Based *only* on the provided project context, generate a production-ready docker-compose.yaml and the necessary Dockerfile configurations suitable for deploying this project.
 
 Follow these instructions precisely:
-1.  Identify the likely tech stack (languages, frameworks, databases, package manager, runtime).
-2.  Create a multi-stage Dockerfile if beneficial for optimizing the final image size (e.g., separate build and runtime stages).
-3.  Include sensible defaults for environment variables (use placeholders like `YOUR_VARIABLE_HERE` if specific values aren't known), volumes for persistent data (if applicable), and basic networking in the docker-compose.yaml.
-4.  If a Dockerfile is not necessary (e.g., the compose file uses a pre-built public image directly), provide an empty string for the "dockerfile" field.
+1. Identify the likely tech stack (languages, frameworks, databases, package manager, runtime).
+2. Analyze the repository structure from the provided context to identify distinct services or components that should have their own Dockerfiles.
+3. Create separate Dockerfiles for each identified service in the architecture.
+4. For each Dockerfile:
+   - Use multi-stage builds if beneficial for optimizing the final image size
+   - Specify the exact path where each Dockerfile should be located, based on the actual repository structure (e.g., if a React app is in "./client", use "./client/Dockerfile")
+   - Choose a descriptive service name based on what the component actually does (e.g., "web-client", "api-server", "database", etc.)
+5. Include sensible defaults for environment variables (use placeholders like `YOUR_VARIABLE_HERE` if specific values aren't known), volumes for persistent data (if applicable), and basic networking in the docker-compose.yaml.
+6. Make sure your docker-compose.yaml references all the individual Dockerfiles correctly with relative paths that match the repository structure.
+
+DO NOT combine multiple services' Dockerfiles into a single Dockerfile. Each service should have its own separate Dockerfile in the appropriate directory.
+DO NOT assume generic "frontend" and "backend" directories unless they actually exist in the repository structure.
 """
 
 # --- FastAPI App Instance ---
@@ -76,11 +90,11 @@ async def generate_docker_config(request: RepoRequest):
     Accepts a GitHub repository URL and OpenAI API key, processes it with Repomix,
     queries GPT-4.1-mini via OpenAI API, and returns generated Docker configurations.
     """
-    # Use API key from request instead of environment variable
+
     api_key = request.openai_api_key
-    
+
     if not api_key:
-         raise HTTPException(status_code=400, detail="OpenAI API key is required.")
+        raise HTTPException(status_code=400, detail="OpenAI API key is required.")
 
     repo_url = request.repo_url
     logger.info(f"Processing request for repository: {repo_url}")
@@ -211,21 +225,32 @@ async def generate_docker_config(request: RepoRequest):
                                 "required": ["languages", "frameworks", "databases", "packageManager", "runtime"],
                                 "additionalProperties": False
                             },
-                            "dockerfile": {
-                                "type": "object",
-                                "properties": {
-                                    "content": {
-                                        "type": "string",
-                                        "description": "Complete Dockerfile content"
+                            "dockerfiles": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "content": {
+                                            "type": "string",
+                                            "description": "Complete Dockerfile content"
+                                        },
+                                        "language": {
+                                            "type": "string",
+                                            "description": "Language identifier for syntax highlighting",
+                                            "enum": ["dockerfile"]
+                                        },
+                                        "location": {
+                                            "type": "string",
+                                            "description": "Path where this Dockerfile should be saved (e.g., \"./web/Dockerfile\")"
+                                        },
+                                        "service": {
+                                            "type": "string",
+                                            "description": "Name of the service this Dockerfile is for (e.g., \"frontend\", \"backend\")"
+                                        }
                                     },
-                                    "language": {
-                                        "type": "string",
-                                        "description": "Language identifier for syntax highlighting",
-                                        "enum": ["dockerfile"]
-                                    }
-                                },
-                                "required": ["content", "language"],
-                                "additionalProperties": False
+                                    "required": ["content", "language", "location", "service"],
+                                    "additionalProperties": False
+                                }
                             },
                             "dockerCompose": {
                                 "type": "object",
@@ -244,7 +269,7 @@ async def generate_docker_config(request: RepoRequest):
                                 "additionalProperties": False
                             }
                         },
-                        "required": ["techStack", "dockerfile", "dockerCompose"],
+                        "required": ["techStack", "dockerfiles", "dockerCompose"],
                         "additionalProperties": False
                     },
                     "strict": True
@@ -273,12 +298,31 @@ async def generate_docker_config(request: RepoRequest):
             # The LLM should return a JSON string matching the format requested
             llm_json_data = json.loads(cleaned_content)
             
-            # Check if we need to convert from old format to new format with CodeFile
-            if isinstance(llm_json_data.get("dockerfile"), str):
-                llm_json_data["dockerfile"] = {
-                    "content": llm_json_data["dockerfile"],
-                    "language": "dockerfile"
-                }
+            # Check if we need to convert from old format to new format
+            # Support backward compatibility with old format that used a single dockerfile
+            if "dockerfile" in llm_json_data and "dockerfiles" not in llm_json_data:
+                # Convert single dockerfile to the new format of dockerfiles array
+                if isinstance(llm_json_data["dockerfile"], str):
+                    dockerfile_content = llm_json_data["dockerfile"]
+                    dockerfile_language = "dockerfile"
+                else:
+                    dockerfile_content = llm_json_data["dockerfile"].get("content", "")
+                    dockerfile_language = llm_json_data["dockerfile"].get("language", "dockerfile")
+                
+                # Create the new dockerfiles array with a single item
+                llm_json_data["dockerfiles"] = [{
+                    "content": dockerfile_content,
+                    "language": dockerfile_language,
+                    "location": "./Dockerfile",
+                    "service": "app"
+                }]
+                
+                # Remove the old key
+                del llm_json_data["dockerfile"]
+            
+            # Ensure dockerfiles is an array if it exists
+            if "dockerfiles" in llm_json_data and not isinstance(llm_json_data["dockerfiles"], list):
+                llm_json_data["dockerfiles"] = [llm_json_data["dockerfiles"]]
             
             if isinstance(llm_json_data.get("dockerCompose"), str):
                 llm_json_data["dockerCompose"] = {
