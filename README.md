@@ -2,6 +2,15 @@
 
 DockerComposeAIGenerator is an AI-powered tool that automatically generates Dockerfile and docker-compose.yaml files for any GitHub repository, making containerization and deployment quick and easy.
 
+## Demo
+
+A public demo version is available at: [https://dockergen.jonte.au](https://dockergen.jonte.au)
+
+**Important Notes about the Demo:**
+- You must provide your own OpenAI API key to use the demo version
+- Unlike the main version where the API key is defined in a server-side .env file, the demo requires users to input their key in the web interface
+- The demo is based on the [`demo-version`](https://github.com/yourusername/DockerComposeAIGenerator/tree/demo-version) branch
+
 ## Overview
 
 This project takes a GitHub repository URL as input, analyzes its structure and content, and uses an AI model to generate appropriate Docker configuration files tailored to that specific project. It's perfect for developers who want to quickly containerize and deploy projects without spending time manually crafting Docker configurations.
