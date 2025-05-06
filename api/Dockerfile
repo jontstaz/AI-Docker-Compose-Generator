@@ -12,11 +12,11 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy our start.py file first
-COPY start.py .
-
-# Copy the rest of the application code
+# Copy all application code
 COPY . .
+
+# Ensure our start.py is the latest version by copying it last
+COPY start.py .
 
 # Expose port
 EXPOSE 8000
