@@ -18,10 +18,20 @@ interface TechStack {
   runtime: string | null
 }
 
+interface DockerfileInfo {
+  content: string
+  language: string
+  location: string
+  service: string
+}
+
 interface DockerConfigResponse {
   techStack: TechStack
-  dockerfile: string
-  dockerCompose: string
+  dockerfiles: DockerfileInfo[]
+  dockerCompose: {
+    content: string
+    language: string
+  }
 }
 
 export function GitHubRepoForm() {
@@ -118,7 +128,7 @@ export function GitHubRepoForm() {
           </div>
 
           <TechStackDisplay techStack={dockerConfig.techStack} />
-          <DockerResults dockerfile={dockerConfig.dockerfile} dockerCompose={dockerConfig.dockerCompose} />
+          <DockerResults dockerfiles={dockerConfig.dockerfiles} dockerCompose={dockerConfig.dockerCompose} />
         </div>
       )}
     </div>
