@@ -9,7 +9,7 @@ A public demo version is available at: [https://dockergen.jonte.au](https://dock
 **Important Notes about the Demo:**
 - You must provide your own OpenAI API key to use the demo version
 - Unlike the main version where the API key is defined in a server-side .env file, the demo requires users to input their key in the web interface
-- The demo is based on the [`demo-version`](https://github.com/yourusername/DockerComposeAIGenerator/tree/demo-version) branch
+- The demo is based on the [`demo-version`](https://github.com/jontstaz/DockerComposeAIGenerator/tree/demo-version) branch
 
 ## Overview
 
@@ -51,7 +51,7 @@ The project consists of two main components:
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/yourusername/DockerComposeAIGenerator.git
+   git clone https://github.com/jontstaz/DockerComposeAIGenerator.git
    cd DockerComposeAIGenerator
    ```
 
