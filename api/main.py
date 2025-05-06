@@ -26,6 +26,9 @@ if not OPENAI_API_KEY:
 # --- Pydantic Models for Request/Response ---
 class RepoRequest(BaseModel):
     repo_url: str = Field(..., description="Public URL of the GitHub repository")
+    api_provider: str = Field("openai", description="AI API provider to use ('openai' or 'ollama')")
+    api_endpoint: str | None = Field(None, description="Custom API endpoint URL (for Ollama)")
+    model_name: str | None = Field("gpt-4.1-mini-2025-04-14", description="Model name to use (OpenAI or Ollama model)")
     # Optional: Add model choice later if needed
     # llm_model: str | None = Field("gpt-4.1-mini-2025-04-14", description="OpenAI model identifier")
 
@@ -88,13 +91,25 @@ app = FastAPI(
 async def generate_docker_config(request: RepoRequest):
     """
     Accepts a GitHub repository URL, processes it with Repomix,
-    queries GPT-4.1-mini via OpenAI API, and returns generated Docker configurations.
+    queries an AI model via OpenAI or Ollama API, and returns generated Docker configurations.
     """
-    if not OPENAI_API_KEY:
-         raise HTTPException(status_code=500, detail="Server configuration error: OpenAI API key not set.")
-
     repo_url = request.repo_url
-    logger.info(f"Processing request for repository: {repo_url}")
+    api_provider = request.api_provider.lower()
+    api_endpoint = request.api_endpoint
+    model_name = request.model_name or "gpt-4.1-mini-2025-04-14"
+    
+    # Validate API provider choice
+    if api_provider not in ["openai", "ollama"]:
+        raise HTTPException(status_code=400, detail="Invalid API provider. Use 'openai' or 'ollama'")
+    
+    # Check API configuration
+    if api_provider == "openai" and not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="Server configuration error: OpenAI API key not set.")
+    
+    if api_provider == "ollama" and not api_endpoint:
+        raise HTTPException(status_code=400, detail="Ollama API endpoint URL is required when using Ollama provider.")
+
+    logger.info(f"Processing request for repository: {repo_url} using {api_provider} provider")
 
     # Set RepomixConfigIgnore
     ignore = RepomixConfigIgnore(
@@ -168,18 +183,23 @@ async def generate_docker_config(request: RepoRequest):
     if not repo_context:
          raise HTTPException(status_code=500, detail="Repomix generated empty context.")
 
-    # --- 2. Query GPT-4.1-mini via OpenAI API ---
+    # --- 2. Query AI Model via Selected API ---
     final_prompt = LLM_PROMPT_TEMPLATE.format(repo_context=repo_context)
     
     try:
-        # Initialize OpenAI client
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        # Initialize client based on provider
+        if api_provider == "openai":
+            # Use OpenAI API
+            client = openai.OpenAI(api_key=OPENAI_API_KEY)
+            logger.info(f"Sending request to OpenAI model {model_name} for {repo_url}")
+        else:
+            # Use Ollama API (compatible with OpenAI client)
+            client = openai.OpenAI(api_key="ollama", base_url=api_endpoint)
+            logger.info(f"Sending request to Ollama model {model_name} at {api_endpoint} for {repo_url}")
         
-        logger.info(f"Sending request to OpenAI GPT-4.1-mini for {repo_url}")
-        
-        # Make the API call to OpenAI GPT-4.1
+        # Make the API call - same format for both providers thanks to compatibility
         response = client.chat.completions.create(
-            model="gpt-4.1-mini-2025-04-14",
+            model=model_name,
             max_tokens=8000,
             messages=[
                 {"role": "user", "content": final_prompt}
@@ -276,10 +296,10 @@ async def generate_docker_config(request: RepoRequest):
         
         # Extract content from response
         llm_content_raw = response.choices[0].message.content
-        logger.info(f"Received response from OpenAI GPT-4.1-mini for {repo_url}")
+        logger.info(f"Received response from {api_provider} model {model_name} for {repo_url}")
 
         if not llm_content_raw:
-            raise HTTPException(status_code=500, detail="GPT-4.1-mini returned an empty response.")
+            raise HTTPException(status_code=500, detail="Model returned an empty response.")
 
         # --- 3. Parse LLM Response ---
         try:
@@ -340,14 +360,14 @@ async def generate_docker_config(request: RepoRequest):
              raise HTTPException(status_code=500, detail=f"LLM response did not match required format: {e}")
 
     except openai.RateLimitError as e:
-        logger.error(f"OpenAI rate limit exceeded: {e}", exc_info=True)
+        logger.error(f"Model rate limit exceeded: {e}", exc_info=True)
         raise HTTPException(status_code=429, detail=f"Rate limit exceeded: {e}")
     except openai.APIError as e:
-        logger.error(f"OpenAI API error: {e}", exc_info=True)
-        raise HTTPException(status_code=502, detail=f"Failed to get a response from OpenAI: {e}")
+        logger.error(f"Model API error: {e}", exc_info=True)
+        raise HTTPException(status_code=502, detail=f"Failed to get a response from model: {e}")
     except openai.APIConnectionError as e:
-        logger.error(f"Connection to OpenAI API failed: {e}", exc_info=True)
-        raise HTTPException(status_code=503, detail=f"Failed to connect to OpenAI API: {e}")
+        logger.error(f"Connection to model API failed: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Failed to connect to model API: {e}")
     except Exception as e:
         logger.error(f"An unexpected error occurred during LLM interaction: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
