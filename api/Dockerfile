@@ -18,5 +18,8 @@ COPY . .
 # Expose port
 EXPOSE 8000
 
-# Start the application
+# Add the current directory to PYTHONPATH
+ENV PYTHONPATH="/app:${PYTHONPATH}"
+
+# Start the application - adding the absolute module path
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
